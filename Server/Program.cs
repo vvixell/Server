@@ -34,7 +34,6 @@ namespace Server
 
                 Thread ReadStreamsThread = new Thread(ReadUserStreams);
                 ReadStreamsThread.Start();
-
                 
                 while (true)
                 {
@@ -71,23 +70,25 @@ namespace Server
         {
             while (true)
             {
+                
                 try
                 {
                     foreach (User user in Users)
                     {
+                        //Console.WriteLine(Users.Count);
                         using (StreamReader sr = new StreamReader(user.Stream))
                         {
-                            while (!sr.EndOfStream)
-                            {
-                                string line = sr.ReadLine();
-                                SendMessageToAllUsers(user.ID, $"{user.Username} : {line}");
-                            }
+                            Console.WriteLine("Test");
+                            string line = sr.ReadLine();
+                            Console.WriteLine(line);
+                            //SendMessageToAllUsers(user.ID, $"{user.Username} : {line}");
                         }
+                        
                     }
                 }
                 catch (Exception e)
                 {
-
+                    Console.WriteLine(e.ToString());
                 }
             }
         }
@@ -100,14 +101,14 @@ namespace Server
 
         static void SendMessageToAllUsers(int SenderID, string message)
         {
+            byte[] msg = System.Text.Encoding.UTF8.GetBytes(message);
             foreach (User user in Users)
             {
                 if (user.ID == SenderID) continue;
 
-                byte[] msg = System.Text.Encoding.UTF8.GetBytes(message);
                 user.Stream.Write(msg, 0, msg.Length);
             }
-            Console.WriteLine(message);
+            Console.WriteLine("Sent: " + message);
         }
 
         static void SendMessageToUser(int SenderID, User user, string message)
@@ -115,7 +116,7 @@ namespace Server
             byte[] msg = System.Text.Encoding.UTF8.GetBytes(message);
             user.Stream.Write(msg, 0, msg.Length);
 
-            Console.WriteLine(message);
+            Console.WriteLine("Sent: " + message);
         }
 
         static void ListenForConnection()
@@ -126,7 +127,6 @@ namespace Server
 
         static void ConnectUser(TcpClient Client)
         {
-            Console.WriteLine("UserJoined");
             User newUser = new User(NextID, Client);
             Users.Add(newUser);
             SendMessageToAllUsers(newUser.ID, $"{newUser.Username} Has Joined");
