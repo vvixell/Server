@@ -24,7 +24,7 @@ namespace Server
             this.Client = Client;
             this.ID = ID;
 
-            using (StreamReader sr = new StreamReader(Client.GetStream()))
+            using (StreamReader sr = new StreamReader(Stream, Encoding.ASCII, true, 1, true))
             {
                 Username = sr.ReadLine();
             }

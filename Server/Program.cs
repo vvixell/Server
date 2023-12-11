@@ -40,12 +40,6 @@ namespace Server
                     TcpClient client = server.AcceptTcpClient();
                     ConnectUser(client);
                 }
-
-                //Thread ConnectionThread = new Thread(ListenForConnection);
-                //ConnectionThread.Start();
-
-                //Thread ReadStreamsThread = new Thread(ReadUserStreams);
-                //ReadStreamsThread.Start();
             }
             catch(SocketException error)
             {
@@ -68,28 +62,33 @@ namespace Server
 
         static void ReadUserStreams()
         {
-            while (true)
+            try
             {
-                
-                try
+                while (true)
                 {
-                    foreach (User user in Users)
+                    foreach (User user in Users.ToList())
                     {
-                        //Console.WriteLine(Users.Count);
-                        using (StreamReader sr = new StreamReader(user.Stream))
+                        if (!user.Stream.DataAvailable)
+                            continue;
+                        using (StreamReader sr = new StreamReader(user.Stream, System.Text.Encoding.ASCII, true, 1, true))
                         {
-                            Console.WriteLine("Test");
                             string line = sr.ReadLine();
-                            Console.WriteLine(line);
-                            //SendMessageToAllUsers(user.ID, $"{user.Username} : {line}");
+                            if (line == "/Leave")
+                            {
+                                Console.WriteLine("DISCONNECT");
+                                DisconnectUser(user);
+                            }
+                            else
+                            {
+                                SendMessageToAllUsers(user.ID, $"{user.Username} : {line}");
+                            }
                         }
-                        
                     }
                 }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e.ToString());
-                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.ToString());
             }
         }
 
@@ -101,22 +100,22 @@ namespace Server
 
         static void SendMessageToAllUsers(int SenderID, string message)
         {
-            byte[] msg = System.Text.Encoding.UTF8.GetBytes(message);
-            foreach (User user in Users)
+            byte[] msg = System.Text.Encoding.UTF8.GetBytes(message + '\n');
+            foreach (User user in Users.ToList())
             {
                 if (user.ID == SenderID) continue;
 
                 user.Stream.Write(msg, 0, msg.Length);
             }
-            Console.WriteLine("Sent: " + message);
+            Console.WriteLine(message);
         }
 
         static void SendMessageToUser(int SenderID, User user, string message)
         {
-            byte[] msg = System.Text.Encoding.UTF8.GetBytes(message);
+            byte[] msg = System.Text.Encoding.UTF8.GetBytes(message + '\n');
             user.Stream.Write(msg, 0, msg.Length);
 
-            Console.WriteLine("Sent: " + message);
+            Console.WriteLine(message);
         }
 
         static void ListenForConnection()
@@ -135,13 +134,15 @@ namespace Server
 
         static void DisconnectUser(User user)
         {
-            SendMessageToUser(0, user, "Dissconnect");
-            user.Client.Client.Disconnect(true);
+            Console.WriteLine("LEAVE");
+            Users.Remove(user);
+            //user.Client.Close();
+            SendMessageToAllUsers(0, $"{user.Username} Disconnected");
         }
 
         static void StopServer()
         {
-            foreach (User user in Users)
+            foreach (User user in Users.ToList())
             {
                 DisconnectUser(user);
             }
